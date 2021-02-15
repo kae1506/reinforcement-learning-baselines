@@ -1,0 +1,20 @@
+Deep Deterministic Policy Gradient:
+
+-----------------------------------
+
+# NETWORKS IN THEORY:
+Pi - Deterministic Behavorial Policy(State--> Probability distribution over actions)
+Mu - Target Policy
+Beta - Stochastic Behavorial Policy
+
+# ACTUAL NETWORKS:
+Mu - THE ACTOR --> Deterministic Behavorial Policy(State--> Probability distribution over actions)
+Q - THE CRITIC --> Trained Using The Bellman Equation(State, Action --> Value)
+
+# ELEMENTS:
+
+
+# TRAINING EQUATIONS:
+Qpi(st; at) = Eri_t;si>t_E;ai>t_pi [Rt|st; at]
+
+Same DQN TRaining loop

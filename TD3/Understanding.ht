@@ -1,0 +1,16 @@
+###############
+Twin Delayed Deep Deterministic Policy Gradients
+TD3
+###############
+
+Networks:
+    1. Critic 1, target critic 1
+    2. Critic 2, target critic 2
+    3. Actor 1, target Actor 1
+
+Update:
+    1. Each timestep, both critics are updated with this:
+        target = reward + gamma*(min(t_c1, t_c2))(s_, t_a(s_) + epsilon)
+    2. The actor is update with the t_c1 every D timesteps.
+
+#################
