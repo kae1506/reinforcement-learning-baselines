@@ -2,8 +2,10 @@
 My implementation of PPO
 
 Contents:
-PPO-Discrete
-Batch-Continuous PPO:
+
+1.PPO-Discrete
+
+2.Batch-Continuous PPO:
 
     sample:
     episode: 50, score: 215.0, high_score: 431.0,  average: 100.2
@@ -22,3 +24,8 @@ Batch-Continuous PPO:
     episode: 63, score: 180.0, high_score: 511.0,  average: 131.96825396825398
     episode: 64, score: 192.0, high_score: 511.0,  average: 132.90625
     episode: 65, score: 313.0, high_score: 511.0,  average: 135.6769230769231
+
+
+TODO:
+1. make parallelized ppo-discrete
+2. implement multiple collectors
