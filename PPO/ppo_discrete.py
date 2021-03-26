@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import gym
 import numpy as np
 import warnings; warnings.filterwarnings('ignore')
+from matplotlib.animation import FuncAnimation
 
 class PolicyNetwork(nn.Module):
     def __init__(self, input_shape, n_actions):
@@ -235,9 +236,9 @@ high_score = -np.inf
 returns = None
 
 ani = FuncAnimation(plt.gcf(), animate, interval=1000)
+episode = 0
 
-
-for episode in range(1000):
+while True:
     state = env.reset()
     done = False
     score = 0
@@ -247,7 +248,8 @@ for episode in range(1000):
         score += reward
 
         agent.memory.store_memory(state, action, reward, value, prob, 1-done)
-        #env.render()
+        if episode >= 50:
+            env.render()
         state = state_
         frame += 1
         if frame % agent.play_steps == 0:
@@ -259,6 +261,7 @@ for episode in range(1000):
     agent.avg_scores.append(np.mean(agent.scores))
     high_score = max(high_score, score)
     avg = np.mean(agent.scores)
+    episode += 1
 
     print(f'episode: {episode}, high_score: {high_score}, score: {score}, avg: {avg}')
 

@@ -7,7 +7,7 @@ import gym
 import math
 import time
 import matplotlib.pyplot as plt
-from utils import plotLearning
+
 import numpy as np
 
 env = gym.make('CartPole-v1').unwrapped
@@ -142,7 +142,7 @@ if __name__ == '__main__':
             state_, reward, done, info = env.step(action)
             memory.append([state, action, reward, state_, done])
             agent.learn(memory, 64)
-
+            env.render()
             score += reward
             frame += 1
             state = state_
@@ -157,5 +157,5 @@ if __name__ == '__main__':
         avg_score = np.mean(scores[-100:])
         Avg_scores.append(avg_score)
 
-    plotLearning([i for i in range(n_games)], Avg_scores, scores, "simple.png")
+    plt.plot(Avg_scores)
     plt.show()
