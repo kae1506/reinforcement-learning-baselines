@@ -22,8 +22,8 @@ class ICM(nn.Module):
             nn.Linear(self.fc2,  encoding_shape)
         )
 
-        enc_shape = encoding_shape+num_actions
-        #print(enc_shape)
+        enc_shape = encoding_shape + num_actions
+
         self.encoder_predictor = nn.Sequential(
             nn.Linear(enc_shape,      self.fc1), nn.ReLU(),
             nn.Linear(self.fc1,       self.fc2), nn.ReLU(),
@@ -212,15 +212,12 @@ class Agent():
         qValue_[dones] = 0.0
 
         td = rewards + self.gamma * qValue_
-        q_learning_loss = self.model.loss(td, qValue)
+        q_learning_loss = (td-qValue).pow(2).mean()
 
         loss = q_learning_loss + forward_loss + inverse_loss
 
         loss.backward()
         self.optimizer.step()
-
-        #   PER
-        error = td - qValue
 
         self.eps -= self.eps_dec
         if self.eps < self.eps_min:
@@ -259,8 +256,9 @@ if __name__ == '__main__':
             state = state_
 
         scores.append(score)
-        if score >= 200 or i > 999:
-            print(f'solved in --> {i} episodes. LMAO')
+        if score >= 1000 or i > 999:
+            print(f'score: {score}')
+            print(f'solved in --> {i} episodes')
             break
         highscore = max(highscore, score)
 
