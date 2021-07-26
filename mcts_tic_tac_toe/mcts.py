@@ -1,429 +1,221 @@
-import math
 import numpy as np
-import p5 as p
-from tic_tac_toe import TicTacToeEnv
-from copy import deepcopy
+import math
+import random
+import heartrate
 
 class Node:
-    def __init__(self, parent, possible_actions, turn, player):
-        self.state = None
+    def __init__(self, parent, state):
         self.parent = parent
-        self.player = player
+        self.state = state
+        self.player = None
+        self.children = {}
+
         self.value = 0
         self.visits = 0
-        self.children = [None for i in range(9)]
-        self.possible_actions = possible_actions
-        self.fully_expanded = False
-        self.updated_node = True
-        self.turn = turn
-        self.terminal = False
 
-    @property
-    def depth(self):
-        count = 0
-        node = self
-        while not node.parent is None:
-            count += 1
-            node = node.parent
+        self.is_expanded = False
+        if self.state.is_terminal() == True:
+            self.is_terminal = True
+        
+    def choose_node(self, exploration_constant):
+        best_ucb = float('-inf')
+        best_node = None
 
-        return count
+        for child in self.children.values():
+            if child.visits > 0:
+                ucb = child.value / child.visits + exploration_constant* \
+                        math.sqrt(math.log(self.visits/child.visits))
+            else:
+                ucb = float('inf')
 
-    def expand(self, env, turn):
-        print('expand')
-        if self.fully_expanded or not self.updated_node:
-            print(self.fully_expanded)
-            print(self.updated_node)
-            print('the node is already fully expanded or its not updated')
+            if ucb > best_ucb:
+                best_ucb = ucb
+                best_node = child
 
-        state_1 = self.state.copy()
-        playa = self.player
+        return best_node
 
-        for action in self.possible_actions:
-            self.state = state_1
-            next_state, reward, done = env.move(self.state, action, self.player, turn)
-            next_possible_actions = self.possible_actions.copy()
-            next_possible_actions.remove(action)
+    def expand(self):
+        pass
 
-            node = Node(self, next_possible_actions, self.turn, abs(1-playa))
-            if done or len(next_possible_actions) == 0:
-                node.terminal = True
-            node.state = next_state
-            node.updated_node = True
-            self.children[action] = node
+from copy import deepcopy
 
-        self.player = playa
-        flag = False
-        for i in self.possible_actions:
-            if self.children[i] is None:
-                flag = True
-        if not flag:
-            self.fully_expanded = True
+class Board:
+    def __init__(self, board=None):
+        if board:
+            self.state = deepcopy(board.state)
+            self.p1 = deepcopy(board.p1)
 
-    def choose_node(self, scalar, turn):
-        if self.player != turn:
-            return self.choose_node_positive(scalar)
         else:
-            return self.choose_node_negative(scalar)
-
-    def choose_node_positive(self, scalar):
-        max_ucb = -np.inf
-        max_node = []
-        ucbs = []
-
-        for action in self.possible_actions:
-            child = self.children[action]
-            if child.visits > 0:
-                ucb = child.value / child.visits + scalar * math.sqrt(math.log(self.visits / child.visits))
-            else:
-                ucb = np.inf
-            ucbs.append(ucb)
-            if ucb > max_ucb:
-                max_ucb = ucb
-                max_node.append(child)
-
-        return np.random.choice(max_node)
-
-    def choose_node_negative(self, scalar):
-        max_ucb = np.inf
-        max_node = []
-        ucbs = []
-
-        for action in self.possible_actions:
-            child = self.children[action]
-            if child.visits > 0:
-                ucb = -(child.value / child.visits + scalar * math.sqrt(math.log(self.visits / child.visits)))
-            else:
-                ucb = -np.inf
-            ucbs.append(ucb)
-            if ucb < max_ucb:
-                max_ucb = ucb
-                max_node.append(child)
-
-        return np.random.choice(max_node)
+            self.state = ['#'] * 9
+            self.p1 = 1
 
 
-    def choose_action(self, scalar):
-        max_ucb = -np.inf
-        max_action = []
+    def generate_states(self, state=None):
+        if state is None:
+            state = self
 
-        for action in self.possible_actions:
-            child = self.children[action]
-            if child.visits > 0:
-                ucb = child.value / child.visits + scalar * math.sqrt(math.log(self.visits / child.visits))
-            else:
-                ucb = np.inf
-            if ucb > max_ucb:
-                max_ucb = ucb
-                max_action.append(action)
+        states = []
+        # print(state.p1)
 
-        return np.random.choice(max_action)
+        for i in range(9):
+            if state.state[i] == '#':
+                board = Board(state)
+                board.p1 = 3-state.p1
+                # print(board.p1, 'p1')
+                states.append(board.make_move(i))
 
-    def backpropogate(self, value):
-        node = self
-        while node is not None:
-            node.visits += 1
-            node.value += value
-            node = node.parent
+        # print(states[1].p1)
+        # quit()
+        return states
 
+    def make_move(self, position):
+        board = Board(self)
 
+        board.state[position] = board.p1
+        
+        return board
+
+    def is_tie(self):
+        for i in self.state:
+            if i == '#':
+                return False
+
+        return True
+
+    def check(self, state=None):
+        if state is None:
+            state = self.state
+
+        for i in range(3):
+            if state[i*3] == state[i*3 + 1] == state[i*3 + 2] and state[i*3] != '#':
+                return state[i*3]
+
+        for i in range(3):
+            if state[i] == state[i+3] == state[i+6] and state[i] != '#':
+                return state[i]
+
+        if state[0] == state[4] == state[8] and state[0] != '#':
+            return state[0]
+
+        if state[2] == state[4] == state[6] and state[2] != '#':
+            return state[2]
+
+        if self.is_tie():
+            return 0
+
+        return 'False'
+
+    def get_winner(self):
+        if self.check() not in [0, 1, 2]:
+            print('called get_winner when it wasnt terminal, use is_terminal instead')
+
+        return self.check()
+
+    def is_terminal(self):
+        if self.check() in [0, 1, 2]:
+            return True
+
+        return False
+            
 class MCTS:
-    def __init__(self, env):
-        self.env = env
+    def __init__(self, iterations=1600):
+        self.iterations = iterations
+        self.tree = None
 
-    def search(self, init_state, turn):
-        possible_actions = self.env.possible_actions()
-        start_node = Node(None, possible_actions, turn, turn)
-        start_node.state = init_state
+    def search(self, starting_board, player):
 
-        for alo in range(1000):
-            node = start_node
+        opponent = 3-player
+        self.tree = Node(None, starting_board)
+        self.tree.player = opponent
 
-            # traverse
-            if node.fully_expanded:
-                while node.fully_expanded:
-                    node = node.choose_node(1/math.sqrt(2))
+        for iteration in range(self.iterations):
+            node = self.traverse_and_expand(self.tree)
+            
+            score = self.rollout(node, opponent)
+            self.backpropogate(node, score)
 
+        winner_node = self.tree.choose_node(0)
+        # print(self.tree.state.is_terminal())
+        # for i in list(self.tree.children.keys()) : 
+        #     print(len(self.tree.children.keys()))
+        #     print(i.state)        
+        return winner_node.state
 
-            node_terminaled = False
-            if node.terminal:
-                #print(node.state)
-                #print('terminaled')
-                action = node.parent.children.index(node)
-                _, reward, _  = self.env.move(node.parent.state, action, node.parent.player, turn)
-                node.backpropogate(reward)
-                node_terminaled = True
-                continue
-
-            # expand
-            node.expand(self.env, turn)
-            node = node.choose_node(2, turn)
-
-            if node.terminal and not node_terminaled:
-                #print('terminaled')
-                action = node.parent.children.index(node)
-                _, reward, _ = self.env.move(node.parent.state, action, node.parent.player, turn)
-                node.backpropogate(reward)
-                continue
-
-            # rollout
-            player = node.player
-            done = False
-            possible_actions = node.possible_actions.copy()
-            state = node.state
-            while not done:
-                if len(possible_actions) > 0:
-                    #print(player, 'player')
-                    action = np.random.choice(possible_actions)
-                    state, reward, done = self.env.move(
-                        state,
-                        action,
-                        player,
-                        turn
-                    )
-                    #env.print_board(state)
-                    #if done:
-                        #print(reward)
-                    possible_actions.remove(action)
-
-                else:
-                    done = True
-                    reward = 0
-
-                if done:
-                    #print('backpropp')
-                    #env.print_board(state)
-                    node.backpropogate(reward)
-
-                player = abs(1-player)
-
-
-        print(start_node.value, start_node.visits)
-        return start_node.choose_action(1/math.sqrt(2))
-
-
-class MCTSVisualiser:
-    def __init__(self, env, init_state, turn, width, height):
-        self.env = env
-        self.possible_actions = self.env.possible_actions()
-        self.start_node = Node(None,self.possible_actions, turn, turn)
-        self.start_node.state = init_state
-        self.on_screen_depths = 0
-        self.scroll = 0
-        self.node = self.start_node
-        self.turn = turn
-        self.width = width
-        self.height = height
-
-        self._xy = (0,0)
-
-    def position(self,node):
-        y = 100 + 100*node.depth
-        offset = 25
-        if node.parent:
-            index = node.parent.children.index(node)
-            x = (int((self.width-(50*len(self.possible_actions) + offset*len(self.possible_actions)))/2)+50/2) + ((25*3) * index)
-        else:
-            x = self.width/2
-        return x, y
-
-
-    def reset(self):
-        p.stroke_weight(3)
-        p.fill(255,0,0)
-        p.stroke(255)
-        p.rect_mode(p.CENTER)
-
-    def render(self, node):
-        self.reset()
-        p.ellipse(self.width/2, 100, 50, 50)
-        p.text_align(p.CENTER)
-
-        p.stroke(255)
-        p.stroke_weight(1)
-        p.fill(255)
-        p.text(f'{node.visits} {node.value}', self.width/2-50/2+20, 100 + 50)
-        self.reset()
-
-        self._xy = (self.width/2, 100)
-
-    def render_children(self, children, chosen_node, parent, ids=None):
-        offset = 25
-        last_pos = (int((self.width-(50*len(self.possible_actions) + offset*len(self.possible_actions)))/2)+50/2)
-        chosen_xy = (0,0)
-
-        if ids:
-            print(ids)
-
-        for i in children:
-            if i == chosen_node:
-                p.stroke(0,255,0)
-                p.fill(0,255,0)
-
-            if i == None:
-                p.fill(0,0,0,50)
-
-                p.line(last_pos, 100 + 100*chosen_node.depth + self.scroll, self._xy[0], self._xy[1])
-                p.ellipse(last_pos, 100 + 100*chosen_node.depth + self.scroll, 50, 50)
-
+    def traverse_and_expand(self, node):
+        while not node.state.is_terminal():
+            if node.is_expanded:
+                node = node.choose_node(2)
+                # print(node.choose_node(2))
             else:
-                p.line(last_pos, 100 + 100*i.depth + self.scroll, self._xy[0], self._xy[1])
-                p.ellipse(last_pos, 100 + 100*i.depth + self.scroll, 50, 50)
+                return self.expand(node)
 
-            if i is not None:
-                p.stroke(255)
-                p.fill(255)
-                p.stroke_weight(1)
+        return node
 
-                p.text(f'{i.visits} {i.value}', last_pos, 100+100*i.depth+self.scroll+25)
+    def expand(self, node):
+        states = node.state.generate_states()
 
-            self.reset()
+        for state in states:
+            child = Node(node, state)
 
-            if i == chosen_node:
-                chosen_xy = (last_pos, 100 + 100*i.depth + self.scroll)
+            node.children[state] = child
+            node.children[state].player = 3 - node.player
 
-            last_pos += offset + offset + 50/2
+        node.is_expanded = True
+        return random.choice(list(node.children.values()))
 
-        self._xy = deepcopy(chosen_xy)
-        print(self._xy)
+    def rollout(self, node, opponent):
+        temp_node = Node(node.parent, node.state)
+        temp_node.player = node.player
+        if temp_node.state.is_terminal():
+            status = temp_node.state.get_winner()
 
-    def render_rollout(self, node, reward):
-        p.stroke(0,0,255)
-        p.stroke_weight(5)
-        print(self._xy)
+            if status == opponent:
+                temp_node.parent.value = -10000
+                return status
 
-        p.line(self._xy[0], self._xy[1], self._xy[0], self._xy[1]+100)
-        p.line(self._xy[0], self._xy[1]+100, self._xy[0]-15, self._xy[1]+100-15)
-        p.line(self._xy[0], self._xy[1]+100, self._xy[0]+15, self._xy[1]+100-15)
+        board = temp_node.state
+        while not board.is_terminal():
+            board = random.choice(board.generate_states())
+        
 
-        p.stroke(255)
-        p.fill(255)
-        p.stroke_weight(1)
-        p.text(f"R:{reward}", self.width/2, 900-self.scroll*5+25)
+        return board.get_winner()
+        
+    def backpropogate(self, node, result):
+        temp_node = node
+        while (temp_node != None):
+            temp_node.visits += 1
+            if (temp_node.player == result):
+                temp_node.value += 10
+            temp_node = temp_node.parent
 
-        self.reset()
+if __name__ == '__main__':
+    mcts = MCTS()
+    b = Board()
+    b.p1 = 2
+    if int(input('1 if heartrate trace')) == 1:
+        heartrate.trace(browser=True)
 
-    def render_backpropogation(self, node, reward):
-        node_ = node
-        while node_ is not None:
-            x, y = self.position(node_)
-            p.stroke(0,255,0)
-            p.fill(255,0,0)
-            p.ellipse(x, y, 50, 50)
-            if node_.parent:
-                px, py = self.position(node_.parent)
-                p.line(px, py, x, y)
+    p = 1
+    while not b.is_terminal():
+        print(b.p1, ' stot')
 
-            node_ = node_.parent
-            self.reset()
-
-
-    def step(self, t):
-        node = self.node
-
-        if t == 0 or t == 1:
-            p.fill(0)
-            p.stroke(0)
-            node = self.start_node
-            p.rect(500,500, self.width, self.height)
-
-            self.reset()
-            self.render(node)
+        b = mcts.search(b, p)
 
 
-        self.reset()
-    #    node = self.start_node
-
-        # traverse
-        if t == 25:
-            if node.fully_expanded:
-                while node.fully_expanded:
-                    new_node = node.choose_node(1/math.sqrt(2), self.turn)
-                    self.render_children(node.children, new_node, node, ids='traverse__')
-                    node = new_node
-                    self.reset()
-
-            p.fill(255)
-            p.stroke(255)
-            p.stroke_weight(1)
-            p.text('traverse', 900,800)
-
-            self.reset()
-
-        node_terminaled = False
-        if node.terminal:
-            #print(node.state)
-            print('terminaled')
-            action = node.parent.children.index(node)
-            _, reward, _  = self.env.move(node.parent.state, action, node.parent.player, turn)
-            #self.render_backpropogation(node, reward)
-            node.backpropogate(reward)
-            node_terminaled = True
-            t = 0
-            return
-
-        # expand
-        if t == 50:
-            node.expand(self.env, self.turn)
-            new_node = node.choose_node(2, self.turn)
-            self.render_children(node.children, new_node, node, ids='expand__')
-            node = new_node
-            p.fill(255)
-            p.stroke(255)
-            p.stroke_weight(1)
-            p.text('expansion', 900,850)
-
-        if node.terminal and not node_terminaled:
-            #print('terminaled')
-            action = node.parent.children.index(node)
-            _, reward, _ = self.env.move(node.parent.state, action, node.parent.player, turn)
-            #self.render_backpropogation(node, reward)
-            node.backpropogate(reward)
-            t = 0
-            return t
-
-        # rollout
-        if t == 75:
-            player = node.player
-            done = False
-            possible_actions = node.possible_actions.copy()
-            state = node.state
-            p.fill(255)
-            p.stroke(255)
-            p.stroke_weight(1)
-            p.text('rollout', 900,900)
-
-            self.reset()
-
-            while not done:
-                if len(possible_actions) > 0:
-                    #print(player, 'player')
-                    action = np.random.choice(possible_actions)
-                    state, reward, done = self.env.move(
-                        state,
-                        action,
-                        player,
-                        self.turn
-                    )
-                    #env.print_board(state)
-                    #if done:
-                        #print(reward)
-                    possible_actions.remove(action)
-
-                else:
-                    done = True
-                    reward = 0
-
-                if done:
-                    self.render_rollout(node, reward)
-                    #self.render_backpropogation(node, reward)
-                    node.backpropogate(reward)
 
 
-                player = abs(1-player)
+        print('\n\n')
+        for i in range(3):
+            for j in range(3):
+                print(b.state[i*3 + j], end=' ')
+            print('\n')
 
-        if t == 125:
-            t = 0
-
-        self.node = node
-
-        return t
+        p = 3-p
+        # b = mcts.search(b, p)
+        # p = 3-p
+        # print('\n\n')
+        # for i in range(3):
+        #     for j in range(3):
+        #         print(b.state[i*3 + j], end=' ')
+        #     print('\n')
+        
