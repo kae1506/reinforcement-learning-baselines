@@ -2,6 +2,7 @@ import numpy as np
 import math
 import random
 import heartrate
+import copy
 
 class Node:
     def __init__(self, parent, state):
@@ -121,18 +122,26 @@ class MCTS:
     def __init__(self, iterations=1600):
         self.iterations = iterations
         self.tree = None
+        self.root = None
+        self.search_path = []
 
     def search(self, starting_board, player):
 
         opponent = 3-player
+            
         self.tree = Node(None, starting_board)
         self.tree.player = opponent
-
+        self.search_path.append(self.tree)
+        if not self.root:
+            self.root = copy.deepcopy(self.tree)
+          
+        
         for iteration in range(self.iterations):
             node = self.traverse_and_expand(self.tree)
             
-            score = self.rollout(node, opponent)
-            self.backpropogate(node, score)
+            result = self.rollout(node, opponent)
+            self.backpropogate(node, result)
+            
 
         winner_node = self.tree.choose_node(0)
         # print(self.tree.state.is_terminal())
@@ -159,6 +168,8 @@ class MCTS:
 
             node.children[state] = child
             node.children[state].player = 3 - node.player
+            
+            self.search_path.append(child)
 
         node.is_expanded = True
         return random.choice(list(node.children.values()))
